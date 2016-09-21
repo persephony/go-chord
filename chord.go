@@ -292,16 +292,22 @@ func (r *Ring) GetKey(n int, key []byte) ([]RingKeyValue, error) {
 
 // Try to delete n keys on the ring.  Only the last error is visible previous
 // errors are masked.
-func (r *Ring) DeleteKey(n int, key []byte) error {
+func (r *Ring) DeleteKey(n int, key []byte) ([]RingKeyValue, error) {
 	vns, err := r.Lookup(n, key)
 	if err == nil {
-		for _, vn := range vns {
+		out := make([]RingKeyValue, len(vns))
+		for i, vn := range vns {
+			rkv := RingKeyValue{Vnode: vn}
 			if e := r.transport.DeleteKey(vn, key); e != nil {
 				err = e
+			} else {
+				rkv.Key = key
 			}
+			out[i] = rkv
 		}
+		return out, err
 	}
-	return err
+	return nil, err
 }
 
 func (r *Ring) SetKey(n int, key []byte, v []byte) ([]RingKeyValue, error) {
@@ -331,6 +337,7 @@ func (r *Ring) RestoreVnode(vn *Vnode, rd io.ReadCloser) error {
 	return r.transport.Restore(vn, rd)
 }
 
+// Single key value representation on the ring
 type RingKeyValue struct {
 	Vnode *Vnode
 	Key   []byte

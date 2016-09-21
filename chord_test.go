@@ -324,7 +324,7 @@ func TestSnapshotRestoreDelete(t *testing.T) {
 
 	// Remove data
 	for k, _ := range testkvs {
-		if err := r.DeleteKey(keyCnt, []byte(k)); err != nil {
+		if _, err := r.DeleteKey(keyCnt, []byte(k)); err != nil {
 			t.Fatal(err)
 		}
 	}
@@ -377,7 +377,7 @@ func TestSetGetKey(t *testing.T) {
 		t.Fatal("value mismatch")
 	}
 
-	if err = r2.DeleteKey(2, key); err != nil {
+	if _, err = r2.DeleteKey(2, key); err != nil {
 		t.Fatal(err)
 	}
 }
