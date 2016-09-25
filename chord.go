@@ -81,6 +81,8 @@ type Store interface {
 	New() KVStore
 	// Get datastore for a single vnode.
 	Get(string) (KVStore, error)
+	// Close all underlying datastores managed by this store
+	Close() error
 }
 
 // Delegate to notify on ring events
@@ -232,6 +234,8 @@ func (r *Ring) Leave() error {
 
 	// Wait for the delegate callbacks to complete
 	r.stopDelegate()
+	// Close all datastores after delegates have been called.
+	err = mergeErrors(err, r.store.Close())
 	return err
 }
 
@@ -240,6 +244,10 @@ func (r *Ring) Leave() error {
 func (r *Ring) Shutdown() {
 	r.stopVnodes()
 	r.stopDelegate()
+	// Close all datastores after delegates have been called.
+	if err := r.store.Close(); err != nil {
+		fmt.Println(err)
+	}
 }
 
 // Does a key lookup for up to N successors of a key

@@ -18,7 +18,7 @@ func (r *Ring) init(conf *Config, trans Transport) {
 		vn := &localVnode{}
 		r.vnodes[i] = vn
 		vn.ring = r
-
+		// Initialize default or user specified store
 		kvs := r.store.New()
 		vn.init(i, kvs)
 	}

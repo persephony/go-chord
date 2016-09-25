@@ -41,6 +41,15 @@ func (s *InMemKVStore) Get(vnodeId string) (KVStore, error) {
 	return nil, fmt.Errorf("not found: %s", vnodeId)
 }
 
+// Close all underlying stores returning the last error.
+func (s *InMemKVStore) Close() error {
+	var err error
+	for _, v := range s.a {
+		err = mergeErrors(err, v.Close())
+	}
+	return err
+}
+
 //
 // A single datastore for a vnode
 //
