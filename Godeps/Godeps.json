@@ -1,0 +1,17 @@
+{
+	"ImportPath": "github.com/euforia/go-chord",
+	"GoVersion": "go1.7",
+	"GodepVersion": "v74",
+	"Deps": [
+		{
+			"ImportPath": "gopkg.in/vmihailenco/msgpack.v2",
+			"Comment": "v2.7.3",
+			"Rev": "38f3708c44f1402aeb2f137dd9a9dfb12bae2204"
+		},
+		{
+			"ImportPath": "gopkg.in/vmihailenco/msgpack.v2/codes",
+			"Comment": "v2.7.3",
+			"Rev": "38f3708c44f1402aeb2f137dd9a9dfb12bae2204"
+		}
+	]
+}
