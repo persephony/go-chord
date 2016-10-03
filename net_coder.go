@@ -86,7 +86,7 @@ func (d *decoder) readNext() ([]byte, error) {
 }
 
 // Read first 8 bytes for each dataset to determine dataset size
-// TODO: add byte size argumen (i.e. 1, 2, 4, 8 byte payload header size)
+// bsize argument (i.e. 1, 2, 4, 8 byte payload header size)
 func (d *decoder) readPayloadSize(bsize int) (uint64, error) {
 
 	b := make([]byte, bsize)
