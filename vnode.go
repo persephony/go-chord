@@ -29,7 +29,9 @@ func (vn *localVnode) init(idx int, kv KVStore) {
 	vn.ring.transport.Register(&vn.Vnode, vn)
 
 	vn.store = kv
-	vn.store.Open(vn.String())
+	if err := vn.store.Open(vn.String()); err != nil {
+		log.Println("ERR Could not open datastore:", err)
+	}
 }
 
 // Schedules the Vnode to do regular maintenence
