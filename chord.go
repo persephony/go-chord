@@ -239,7 +239,7 @@ func (r *Ring) Leave() error {
 	return err
 }
 
-// Shutdown shuts down the local processes in a given Chord ring
+// Shutdown shuts down the local processes in a given Chord ring. This call does not signal a leave.
 // Blocks until all the vnodes terminate.
 func (r *Ring) Shutdown() {
 	r.stopVnodes()

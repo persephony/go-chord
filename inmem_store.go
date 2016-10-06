@@ -75,7 +75,7 @@ func (s *InMemKVDatastore) Snapshot() (io.ReadCloser, error) {
 	wr := new(bytes.Buffer)
 	err := msgpack.NewEncoder(wr).Encode(s.m)
 	if err == nil {
-		return &readCloser{wr}, nil
+		return &DummyReadCloser{wr}, nil
 	}
 	return nil, err
 }
@@ -127,10 +127,10 @@ func (s *InMemKVDatastore) Close() error {
 	return nil
 }
 
-type readCloser struct {
+type DummyReadCloser struct {
 	io.Reader
 }
 
-func (rc *readCloser) Close() error {
+func (rc *DummyReadCloser) Close() error {
 	return nil
 }
