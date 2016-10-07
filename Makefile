@@ -6,6 +6,10 @@ clean:
 build:
 	go build
 
+deps:
+	go get github/tools/godep
+	godep restore
+
 test:
 	go test -cover .
 
