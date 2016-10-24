@@ -8,6 +8,8 @@ import (
 	"sync"
 	"sync/atomic"
 	"time"
+
+	"gopkg.in/vmihailenco/msgpack.v2"
 )
 
 const (
@@ -33,8 +35,8 @@ type tcpOutConn struct {
 	host   string
 	sock   *net.TCPConn
 	header tcpHeader // Request header
-	enc    Encoder
-	dec    Decoder
+	enc    *msgpack.Encoder
+	dec    *msgpack.Decoder
 	used   time.Time
 }
 
@@ -111,7 +113,7 @@ type TCPTransport struct {
 	shutdown int32
 }
 
-// Creates a new TCP transport on the given listen address with the
+// InitTCPTransport creates a new TCP transport on the given listen address with the
 // configured timeout duration.
 func InitTCPTransport(listen string, timeout time.Duration) (*TCPTransport, error) {
 	// Try to start the listener
@@ -156,9 +158,8 @@ func (t *TCPTransport) get(vn *Vnode) (VnodeRPC, bool) {
 	w, ok := t.local[key]
 	if ok {
 		return w.obj, ok
-	} else {
-		return nil, ok
 	}
+	return nil, ok
 }
 
 // Gets an outbound connection to a host
@@ -196,8 +197,8 @@ func (t *TCPTransport) getConn(host string) (*tcpOutConn, error) {
 	// Setup the socket
 	sock := conn.(*net.TCPConn)
 	t.setupConn(sock)
-	enc := NewEncoder(sock)
-	dec := NewDecoder(sock)
+	enc := msgpack.NewEncoder(sock)
+	dec := msgpack.NewDecoder(sock)
 	now := time.Now()
 
 	// Wrap the sock
@@ -376,7 +377,6 @@ func (t *TCPTransport) SetKey(vn *Vnode, key []byte, value []byte) error {
 	case <-respChan:
 		return nil
 	}
-	return nil
 }
 
 func (t *TCPTransport) DeleteKey(vn *Vnode, key []byte) error {
@@ -426,7 +426,6 @@ func (t *TCPTransport) DeleteKey(vn *Vnode, key []byte) error {
 	case <-respChan:
 		return nil
 	}
-	return nil
 }
 
 func (t *TCPTransport) GetKey(vn *Vnode, key []byte) ([]byte, error) {
@@ -476,7 +475,6 @@ func (t *TCPTransport) GetKey(vn *Vnode, key []byte) ([]byte, error) {
 	case resp := <-respChan:
 		return resp, nil
 	}
-	return nil, nil
 }
 
 // Request a nodes predecessor
@@ -579,7 +577,7 @@ func (t *TCPTransport) Notify(target, self *Vnode) ([]*Vnode, error) {
 	}
 }
 
-// Find a successor
+// FindSuccessors finds the next n successors
 func (t *TCPTransport) FindSuccessors(vn *Vnode, n int, k []byte) ([]*Vnode, error) {
 	// Get a conn
 	out, err := t.getConn(vn.Host)
@@ -629,7 +627,7 @@ func (t *TCPTransport) FindSuccessors(vn *Vnode, n int, k []byte) ([]*Vnode, err
 	}
 }
 
-// Clears a predecessor if it matches a given vnode. Used to leave.
+// ClearPredecessor clears a predecessor if it matches a given vnode. Used to leave.
 func (t *TCPTransport) ClearPredecessor(target, self *Vnode) error {
 	// Get a conn
 	out, err := t.getConn(target.Host)
@@ -905,8 +903,8 @@ func (t *TCPTransport) handleConn(conn *net.TCPConn) {
 		conn.Close()
 	}()
 
-	dec := NewDecoder(conn)
-	enc := NewEncoder(conn)
+	dec := msgpack.NewDecoder(conn)
+	enc := msgpack.NewEncoder(conn)
 	header := tcpHeader{}
 	var sendResp interface{}
 	for {
@@ -1077,6 +1075,7 @@ func (t *TCPTransport) handleConn(conn *net.TCPConn) {
 			if err != nil {
 				log.Printf("[snapshot] ERR %s", err)
 			}
+			// Must close the connection due to msgpack buffering
 			return
 
 		case tcpRestoreReq:
@@ -1096,6 +1095,7 @@ func (t *TCPTransport) handleConn(conn *net.TCPConn) {
 			if err := obj.Restore(conn); err != nil {
 				log.Printf("[restore] ERR %s", err)
 			}
+			// Must close the connection due to msgpack buffering
 			return
 
 		case tcpSetKeyReq:

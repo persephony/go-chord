@@ -29,7 +29,7 @@ func TestRandStabilize(t *testing.T) {
 	for idx, val := range times {
 		for i := 0; i < len(times); i++ {
 			if idx != i && times[i] == val {
-				collisions += 1
+				collisions++
 			}
 		}
 	}

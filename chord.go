@@ -12,7 +12,7 @@ import (
 	"time"
 )
 
-// Implements the methods needed for a Chord ring
+// Transport implements the methods needed for a Chord ring
 type Transport interface {
 	// Gets a list of the vnodes on the box
 	ListVnodes(string) ([]*Vnode, error)
@@ -62,7 +62,7 @@ type VnodeRPC interface {
 	Restore(io.ReadCloser) error
 }
 
-// Store manager for a single vnode
+// KVstore is the store manager for a single vnode
 type KVStore interface {
 	Open(string) error
 	Get(key []byte) ([]byte, error)
@@ -73,9 +73,7 @@ type KVStore interface {
 	Close() error
 }
 
-//
-// Managing interface for all vnode stores on a node
-//
+// Store is the managing interface for all vnode stores on a node
 type Store interface {
 	// Create a new store and register it.
 	New() KVStore
@@ -94,7 +92,7 @@ type Delegate interface {
 	Shutdown()
 }
 
-// Configuration for Chord nodes
+// Config for Chord nodes
 type Config struct {
 	Hostname      string           // Local host name
 	NumVnodes     int              // Number of vnodes per physical node
@@ -158,7 +156,7 @@ func newRing(store Store) *Ring {
 	return &Ring{store: store}
 }
 
-// Creates a new Chord ring given the config and transport
+// Create a new Chord ring given the config and transport
 func Create(conf *Config, trans Transport, store Store) (*Ring, error) {
 	// Initialize the hash bits
 	conf.hashBits = conf.HashFunc().Size() * 8
@@ -171,7 +169,7 @@ func Create(conf *Config, trans Transport, store Store) (*Ring, error) {
 	return ring, nil
 }
 
-// Joins an existing Chord ring
+// Join an existing Chord ring
 func Join(conf *Config, trans Transport, store Store, existing string) (*Ring, error) {
 	// Initialize the hash bits
 	conf.hashBits = conf.HashFunc().Size() * 8
@@ -221,7 +219,7 @@ func Join(conf *Config, trans Transport, store Store, existing string) (*Ring, e
 	return ring, nil
 }
 
-// Leaves a given Chord ring and shuts down the local vnodes
+// Leave a given Chord ring and shut down the local vnodes
 func (r *Ring) Leave() error {
 	// Shutdown the vnodes first to avoid further stabilization runs
 	r.stopVnodes()
@@ -250,7 +248,7 @@ func (r *Ring) Shutdown() {
 	}
 }
 
-// Does a key lookup for up to N successors of a key
+// Lookup does a key lookup for up to N successors of a key
 func (r *Ring) Lookup(n int, key []byte) ([]*Vnode, error) {
 	// Ensure that n is sane
 	if n > r.config.NumSuccessors {
@@ -260,13 +258,13 @@ func (r *Ring) Lookup(n int, key []byte) ([]*Vnode, error) {
 	// Hash the key
 	h := r.config.HashFunc()
 	h.Write(key)
-	key_hash := h.Sum(nil)
+	keyHash := h.Sum(nil)
 
 	// Find the nearest local vnode
-	nearest := r.nearestVnode(key_hash)
+	nearest := r.nearestVnode(keyHash)
 
 	// Use the nearest node for the lookup
-	successors, err := nearest.FindSuccessors(n, key_hash)
+	successors, err := nearest.FindSuccessors(n, keyHash)
 	if err != nil {
 		return nil, err
 	}
@@ -298,7 +296,7 @@ func (r *Ring) GetKey(n int, key []byte) ([]RingKeyValue, error) {
 	return out, err
 }
 
-// Try to delete n keys on the ring.  Only the last error is visible previous
+// Delete tries to delete n keys on the ring.  Only the last error is visible previous
 // errors are masked.
 func (r *Ring) DeleteKey(n int, key []byte) ([]RingKeyValue, error) {
 	vns, err := r.Lookup(n, key)
@@ -318,6 +316,7 @@ func (r *Ring) DeleteKey(n int, key []byte) ([]RingKeyValue, error) {
 	return nil, err
 }
 
+// SetKey sets a key on the ring returning all vnodes on which the key was set
 func (r *Ring) SetKey(n int, key []byte, v []byte) ([]RingKeyValue, error) {
 	vns, err := r.Lookup(n, key)
 	if err != nil {
@@ -345,7 +344,7 @@ func (r *Ring) RestoreVnode(vn *Vnode, rd io.ReadCloser) error {
 	return r.transport.Restore(vn, rd)
 }
 
-// Single key value representation on the ring
+// RingKeyValue represents a single key value representation on the ring
 type RingKeyValue struct {
 	Vnode *Vnode
 	Key   []byte

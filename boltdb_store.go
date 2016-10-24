@@ -15,7 +15,6 @@ import (
 
 var defaultBucketName = []byte("default")
 
-// Used by chord
 //
 // Store manager for vnodes on a given node
 //
@@ -33,6 +32,7 @@ func NewBoltdbStore(dataDir string) *BoltdbStore {
 	}
 }
 
+// New creates a new kvstore for a single vnode
 func (s *BoltdbStore) New() KVStore {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -43,6 +43,7 @@ func (s *BoltdbStore) New() KVStore {
 	return ikv
 }
 
+// Get a kvstore for a vnode
 func (s *BoltdbStore) Get(vnodeId string) (KVStore, error) {
 	for _, a := range s.a {
 		if a.id == vnodeId {
@@ -77,6 +78,7 @@ func NewBoltdbDatastore(dataDir string) *BoltdbDatastore {
 	return &BoltdbDatastore{dataDir: dataDir}
 }
 
+// Open a new datastore for the given vnode id
 func (s *BoltdbDatastore) Open(id string) (err error) {
 	if s.db != nil {
 		return fmt.Errorf("datastore already open")
