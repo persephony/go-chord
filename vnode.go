@@ -293,7 +293,10 @@ func (vn *localVnode) Route(srcID []byte, data []byte) error {
 	vn.ring.invokeDelegate(func() {
 		conf.Delegate.MessageReceived(&vn.Vnode, data)
 	})
-	return vn.ring.transport.Route(srcID, vn.successors[0], data)
+	if vn.predecessor == nil {
+		return fmt.Errorf("no predecessor: %s", vn.Vnode.StringID())
+	}
+	return vn.ring.transport.Route(srcID, vn.predecessor, data)
 }
 
 // Instructs the vnode to leave

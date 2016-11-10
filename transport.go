@@ -144,16 +144,17 @@ func (lt *LocalTransport) SkipSuccessor(target, self *Vnode) error {
 	return lt.remote.SkipSuccessor(target, self)
 }
 
+// Route data to the next hop
 func (lt *LocalTransport) Route(src []byte, target *Vnode, data []byte) error {
+	// Return if source and target are the same.  This means the data has made
+	// a full run around the ring and routing will stop.
+	if bytes.Equal(src, target.Id) {
+		return nil
+	}
 	// Look for it locally
 	obj, ok := lt.get(target)
 	// If it exists locally, handle it
 	if ok {
-		// Return if source and target are the same.  This means the data has made
-		// a full run around the ring and routing will stop.
-		if bytes.Equal(src, target.Id) {
-			return nil
-		}
 		return obj.Route(src, data)
 	}
 

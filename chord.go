@@ -28,7 +28,7 @@ type Transport interface {
 	// Instructs a node to skip a given successor. Used to leave.
 	SkipSuccessor(target, self *Vnode) error
 	// Route data to a vnode
-	Route([]byte, *Vnode, []byte) error
+	Route(srcID []byte, target *Vnode, data []byte) error
 	// Register for an RPC callbacks
 	Register(*Vnode, VnodeRPC)
 }
@@ -41,7 +41,7 @@ type VnodeRPC interface {
 	ClearPredecessor(*Vnode) error
 	SkipSuccessor(*Vnode) error
 	// Route data around the ring it takes the source id and data as input
-	Route([]byte, []byte) error
+	Route(srcID []byte, data []byte) error
 }
 
 // Delegate to notify on ring events
