@@ -23,7 +23,7 @@ func (m *MockDelegate) SuccessorLeaving(local, remote *Vnode) {
 func (m *MockDelegate) Shutdown() {
 	m.shutdown = true
 }
-func (m *MockDelegate) MessageReceived(vn *Vnode, msg []byte) error {
+func (m *MockDelegate) MessageReceived(src, target *Vnode, msg []byte) error {
 	//fmt.Printf("%s/%x '%s'\n", vn.Host, vn.Id, msg)
 	return nil
 }

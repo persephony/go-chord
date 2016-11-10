@@ -145,10 +145,10 @@ func (lt *LocalTransport) SkipSuccessor(target, self *Vnode) error {
 }
 
 // Route data to the next hop
-func (lt *LocalTransport) Route(src []byte, target *Vnode, data []byte) error {
+func (lt *LocalTransport) Route(src, target *Vnode, data []byte) error {
 	// Return if source and target are the same.  This means the data has made
 	// a full run around the ring and routing will stop.
-	if bytes.Equal(src, target.Id) {
+	if bytes.Equal(src.Id, target.Id) {
 		return nil
 	}
 	// Look for it locally
@@ -213,7 +213,7 @@ func (*BlackholeTransport) ClearPredecessor(target, self *Vnode) error {
 func (*BlackholeTransport) SkipSuccessor(target, self *Vnode) error {
 	return fmt.Errorf("Failed to connect! Blackhole: %s", target.StringID())
 }
-func (*BlackholeTransport) Route(src []byte, target *Vnode, data []byte) error {
+func (*BlackholeTransport) Route(src, target *Vnode, data []byte) error {
 	return fmt.Errorf("Failed to connect! Blackhole: %s", target.StringID())
 }
 func (*BlackholeTransport) Register(v *Vnode, o VnodeRPC) {

@@ -348,7 +348,7 @@ func (cs *GRPCTransport) SkipSuccessor(target, self *Vnode) error {
 }
 
 // Route routes the message around the ring
-func (cs *GRPCTransport) Route(src []byte, target *Vnode, data []byte) error {
+func (cs *GRPCTransport) Route(src, target *Vnode, data []byte) error {
 	// Get a conn
 	out, err := cs.getConn(target.Host)
 	if err != nil {
@@ -442,7 +442,7 @@ func (cs *GRPCTransport) get(vn *Vnode) (VnodeRPC, bool) {
 	return nil, ok
 }
 
-// ListVnodesServe is the server side call
+// ListVnodesServe is called when a peer makes a ListVnode rpc
 func (cs *GRPCTransport) ListVnodesServe(ctx context.Context, in *StringParam) (*VnodeListErr, error) {
 	// Generate all the local clients
 	resp := &VnodeListErr{Vnodes: make([]*Vnode, 0, len(cs.local))}
@@ -454,6 +454,8 @@ func (cs *GRPCTransport) ListVnodesServe(ctx context.Context, in *StringParam) (
 	cs.lock.RUnlock()
 	return resp, nil
 }
+
+// PingServe is called when a peer makes a Ping rpc
 func (cs *GRPCTransport) PingServe(ctx context.Context, in *Vnode) (*BoolErr, error) {
 	_, ok := cs.get(in)
 	if ok {
@@ -461,6 +463,8 @@ func (cs *GRPCTransport) PingServe(ctx context.Context, in *Vnode) (*BoolErr, er
 	}
 	return &BoolErr{Err: fmt.Sprintf("target vnode not found: %s/%s", in.Host, in.Id)}, nil
 }
+
+// NotifyServe is called when a peer makes a Notify rpc
 func (cs *GRPCTransport) NotifyServe(ctx context.Context, in *VnodePair) (*VnodeListErr, error) {
 	obj, ok := cs.get(in.Target)
 	resp := &VnodeListErr{}
@@ -476,6 +480,8 @@ func (cs *GRPCTransport) NotifyServe(ctx context.Context, in *VnodePair) (*Vnode
 	}
 	return resp, nil
 }
+
+// GetPredecessor is called when a peer makes a GetPredecessor rpc
 func (cs *GRPCTransport) GetPredecessorServe(ctx context.Context, in *Vnode) (*VnodeError, error) {
 	obj, ok := cs.get(in)
 	resp := &VnodeError{}

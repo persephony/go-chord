@@ -53,7 +53,7 @@ message ErrResponse {
 }
 
 message ChordMessage {
-    bytes src = 1;
+    Vnode src = 1;
     Vnode target = 2;
     bytes data = 3;
 }

@@ -28,7 +28,7 @@ type Transport interface {
 	// Instructs a node to skip a given successor. Used to leave.
 	SkipSuccessor(target, self *Vnode) error
 	// Route data to a vnode
-	Route(srcID []byte, target *Vnode, data []byte) error
+	Route(src, target *Vnode, data []byte) error
 	// Register for an RPC callbacks
 	Register(*Vnode, VnodeRPC)
 }
@@ -40,8 +40,9 @@ type VnodeRPC interface {
 	FindSuccessors(int, []byte) ([]*Vnode, error)
 	ClearPredecessor(*Vnode) error
 	SkipSuccessor(*Vnode) error
-	// Route data around the ring it takes the source id and data as input
-	Route(srcID []byte, data []byte) error
+	// Route data around the ring following each predecessor.  It takes the
+	// source vnode id and data to be routed as input
+	Route(src *Vnode, data []byte) error
 }
 
 // Delegate to notify on ring events
@@ -51,7 +52,8 @@ type Delegate interface {
 	PredecessorLeaving(local, remote *Vnode)
 	SuccessorLeaving(local, remote *Vnode)
 	Shutdown()
-	MessageReceived(*Vnode, []byte) error
+	// MessageReceived is called when a message is routed to a vnode of a node
+	MessageReceived(src, target *Vnode, data []byte) error
 }
 
 // Config for Chord nodes
@@ -219,5 +221,5 @@ func (r *Ring) Route(data []byte) error {
 	keyHash := r.computeHash(data)
 	// Find the nearest local vnode
 	nearest := r.nearestVnode(keyHash)
-	return nearest.Route(nearest.Id, data)
+	return nearest.Route(&nearest.Vnode, data)
 }

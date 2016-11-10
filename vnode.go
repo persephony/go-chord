@@ -288,15 +288,15 @@ func (vn *localVnode) FindSuccessors(n int, key []byte) ([]*Vnode, error) {
 }
 
 // Route a key upto n successors
-func (vn *localVnode) Route(srcID []byte, data []byte) error {
+func (vn *localVnode) Route(src *Vnode, data []byte) error {
 	conf := vn.ring.config
 	vn.ring.invokeDelegate(func() {
-		conf.Delegate.MessageReceived(&vn.Vnode, data)
+		conf.Delegate.MessageReceived(src, &vn.Vnode, data)
 	})
 	if vn.predecessor == nil {
 		return fmt.Errorf("no predecessor: %s", vn.Vnode.StringID())
 	}
-	return vn.ring.transport.Route(srcID, vn.predecessor, data)
+	return vn.ring.transport.Route(src, vn.predecessor, data)
 }
 
 // Instructs the vnode to leave

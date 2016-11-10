@@ -59,7 +59,7 @@ func (ml *MultiLocalTrans) FindSuccessors(v *Vnode, n int, k []byte) ([]*Vnode, 
 }
 
 // Route message
-func (ml *MultiLocalTrans) Route(src []byte, v *Vnode, k []byte) error {
+func (ml *MultiLocalTrans) Route(src, v *Vnode, k []byte) error {
 	if local, ok := ml.hosts[v.Host]; ok {
 		return local.Route(src, v, k)
 	}

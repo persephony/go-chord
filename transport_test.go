@@ -6,27 +6,27 @@ import (
 )
 
 type MockVnodeRPC struct {
-	err       error
-	pred      *Vnode
-	not_pred  *Vnode
-	succ_list []*Vnode
-	key       []byte
-	succ      []*Vnode
-	skip      *Vnode
+	err      error
+	pred     *Vnode
+	notPred  *Vnode
+	succList []*Vnode
+	key      []byte
+	succ     []*Vnode
+	skip     *Vnode
 }
 
 func (mv *MockVnodeRPC) GetPredecessor() (*Vnode, error) {
 	return mv.pred, mv.err
 }
 func (mv *MockVnodeRPC) Notify(vn *Vnode) ([]*Vnode, error) {
-	mv.not_pred = vn
-	return mv.succ_list, mv.err
+	mv.notPred = vn
+	return mv.succList, mv.err
 }
 func (mv *MockVnodeRPC) FindSuccessors(n int, key []byte) ([]*Vnode, error) {
 	mv.key = key
 	return mv.succ, mv.err
 }
-func (mv *MockVnodeRPC) Route(src []byte, data []byte) error {
+func (mv *MockVnodeRPC) Route(src *Vnode, data []byte) error {
 	return nil
 }
 
@@ -132,9 +132,9 @@ func TestLocalNotify(t *testing.T) {
 	suc1 := &Vnode{Id: []byte{10}}
 	suc2 := &Vnode{Id: []byte{20}}
 	suc3 := &Vnode{Id: []byte{30}}
-	succ_list := []*Vnode{suc1, suc2, suc3}
+	succList := []*Vnode{suc1, suc2, suc3}
 
-	mockVN := &MockVnodeRPC{succ_list: succ_list, err: nil}
+	mockVN := &MockVnodeRPC{succList: succList, err: nil}
 	vn := &Vnode{Id: []byte{0}}
 	l.Register(vn, mockVN)
 
@@ -146,7 +146,7 @@ func TestLocalNotify(t *testing.T) {
 	if res == nil || res[0] != suc1 || res[1] != suc2 || res[2] != suc3 {
 		t.Fatalf("got wrong successor list")
 	}
-	if mockVN.not_pred != self {
+	if mockVN.notPred != self {
 		t.Fatalf("didn't get notified correctly!")
 	}
 
