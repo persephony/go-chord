@@ -6,18 +6,10 @@ import (
 	"time"
 )
 
-type delegateTest struct{}
-
-func (dt *delegateTest) NewPredecessor(local, remoteNew, remotePrev *Vnode) {}
-func (dt *delegateTest) Leaving(local, pred, succ *Vnode)                   {}
-func (dt *delegateTest) PredecessorLeaving(local, remote *Vnode)            {}
-func (dt *delegateTest) SuccessorLeaving(local, remote *Vnode)              {}
-func (dt *delegateTest) Shutdown()                                          {}
-
 func prepRingGrpc(port int) (*Config, *GRPCTransport, error) {
 	listen := fmt.Sprintf("127.0.0.1:%d", port)
 	conf := DefaultConfig(listen)
-	conf.Delegate = &delegateTest{}
+	conf.Delegate = &MockDelegate{}
 	conf.StabilizeMin = time.Duration(15 * time.Millisecond)
 	conf.StabilizeMax = time.Duration(45 * time.Millisecond)
 	timeout := time.Duration(20 * time.Millisecond)
@@ -51,6 +43,14 @@ func TestGRPCJoin(t *testing.T) {
 		t.Fatalf("failed to join local node! Got %s", err)
 	}
 
+	// Wait for some stabilization
+	<-time.After(200 * time.Millisecond)
+
+	// Route a message
+	if err = r1.Route([]byte("test")); err != nil {
+		t.Log(err)
+		t.Fail()
+	}
 	// Shutdown
 	r1.Shutdown()
 	r2.Shutdown()

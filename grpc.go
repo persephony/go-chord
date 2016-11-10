@@ -252,7 +252,7 @@ func (cs *GRPCTransport) FindSuccessors(vn *Vnode, n int, k []byte) ([]*Vnode, e
 
 	go func() {
 		le, err := out.client.FindSuccessorsServe(context.Background(),
-			&FindSuccReq{VN: vn, Count: int32(n), Key: k})
+			&VnodeIntKey{Vn: vn, N: int32(n), Key: k})
 		// Return the connection
 		cs.returnConn(out)
 		if err == nil {
@@ -326,6 +326,40 @@ func (cs *GRPCTransport) SkipSuccessor(target, self *Vnode) error {
 	go func() {
 
 		er, err := out.client.SkipSuccessorServe(context.Background(), &VnodePair{Target: target, Self: self})
+		// Return the connection
+		cs.returnConn(out)
+		if err == nil {
+			if er.Err == "" {
+				respChan <- true
+			}
+			err = fmt.Errorf(er.Err)
+		}
+		errChan <- err
+	}()
+
+	select {
+	case <-time.After(cs.timeout):
+		return fmt.Errorf("command timed out")
+	case err := <-errChan:
+		return err
+	case <-respChan:
+		return nil
+	}
+}
+
+// Route routes the message around the ring
+func (cs *GRPCTransport) Route(src []byte, target *Vnode, data []byte) error {
+	// Get a conn
+	out, err := cs.getConn(target.Host)
+	if err != nil {
+		return err
+	}
+
+	respChan := make(chan bool, 1)
+	errChan := make(chan error, 1)
+
+	go func() {
+		er, err := out.client.RouteServe(context.Background(), &ChordMessage{Src: src, Target: target, Data: data})
 		// Return the connection
 		cs.returnConn(out)
 		if err == nil {
@@ -457,21 +491,25 @@ func (cs *GRPCTransport) GetPredecessorServe(ctx context.Context, in *Vnode) (*V
 	}
 	return resp, nil
 }
-func (cs *GRPCTransport) FindSuccessorsServe(ctx context.Context, in *FindSuccReq) (*VnodeListErr, error) {
-	obj, ok := cs.get(in.VN)
+
+// FindSuccessorsServe serves the FindSuccessors call to the client
+func (cs *GRPCTransport) FindSuccessorsServe(ctx context.Context, in *VnodeIntKey) (*VnodeListErr, error) {
+	obj, ok := cs.get(in.Vn)
 	resp := &VnodeListErr{}
 	if ok {
-		nodes, err := obj.FindSuccessors(int(in.Count), in.Key)
+		nodes, err := obj.FindSuccessors(int(in.N), in.Key)
 		if err == nil {
 			resp.Vnodes = trimSlice(nodes)
 		} else {
 			resp.Err = err.Error()
 		}
 	} else {
-		resp.Err = fmt.Sprintf("target vnode not found: %s/%s", in.VN.Host, in.VN.Id)
+		resp.Err = fmt.Sprintf("target vnode not found: %s/%s", in.Vn.Host, in.Vn.Id)
 	}
 	return resp, nil
 }
+
+// ClearPredecessorServe serves the ClearPredecessor call to the client
 func (cs *GRPCTransport) ClearPredecessorServe(ctx context.Context, in *VnodePair) (*ErrResponse, error) {
 	obj, ok := cs.get(in.Target)
 	resp := &ErrResponse{}
@@ -484,6 +522,8 @@ func (cs *GRPCTransport) ClearPredecessorServe(ctx context.Context, in *VnodePai
 	}
 	return resp, nil
 }
+
+// SkipSuccessorServe serves the SkipSuccessor call to the client
 func (cs *GRPCTransport) SkipSuccessorServe(ctx context.Context, in *VnodePair) (*ErrResponse, error) {
 	obj, ok := cs.get(in.Target)
 	resp := &ErrResponse{}
@@ -493,6 +533,20 @@ func (cs *GRPCTransport) SkipSuccessorServe(ctx context.Context, in *VnodePair) 
 		}
 	} else {
 		resp.Err = fmt.Sprintf("target vnode not found: %s/%s", in.Target.Host, in.Target.Id)
+	}
+	return resp, nil
+}
+
+// RouteServe serves the Route call to the client
+func (cs *GRPCTransport) RouteServe(ctx context.Context, vik *ChordMessage) (*ErrResponse, error) {
+	obj, ok := cs.get(vik.Target)
+	resp := &ErrResponse{}
+	if ok {
+		if err := obj.Route(vik.Src, vik.Data); err != nil {
+			resp.Err = err.Error()
+		}
+	} else {
+		resp.Err = fmt.Sprintf("target vnode not found: %s/%s", vik.Target.Host, vik.Target.Id)
 	}
 	return resp, nil
 }

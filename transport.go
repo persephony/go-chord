@@ -1,6 +1,7 @@
 package chord
 
 import (
+	"bytes"
 	"fmt"
 	"sync"
 )
@@ -143,6 +144,23 @@ func (lt *LocalTransport) SkipSuccessor(target, self *Vnode) error {
 	return lt.remote.SkipSuccessor(target, self)
 }
 
+func (lt *LocalTransport) Route(src []byte, target *Vnode, data []byte) error {
+	// Look for it locally
+	obj, ok := lt.get(target)
+	// If it exists locally, handle it
+	if ok {
+		// Return if source and target are the same.  This means the data has made
+		// a full run around the ring and routing will stop.
+		if bytes.Equal(src, target.Id) {
+			return nil
+		}
+		return obj.Route(src, data)
+	}
+
+	// Pass onto remote
+	return lt.remote.Route(src, target, data)
+}
+
 func (lt *LocalTransport) Register(v *Vnode, o VnodeRPC) {
 	// Register local instance
 	key := v.StringID()
@@ -194,6 +212,8 @@ func (*BlackholeTransport) ClearPredecessor(target, self *Vnode) error {
 func (*BlackholeTransport) SkipSuccessor(target, self *Vnode) error {
 	return fmt.Errorf("Failed to connect! Blackhole: %s", target.StringID())
 }
-
+func (*BlackholeTransport) Route(src []byte, target *Vnode, data []byte) error {
+	return fmt.Errorf("Failed to connect! Blackhole: %s", target.StringID())
+}
 func (*BlackholeTransport) Register(v *Vnode, o VnodeRPC) {
 }

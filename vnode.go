@@ -141,19 +141,19 @@ func (vn *localVnode) GetPredecessor() (*Vnode, error) {
 func (vn *localVnode) notifySuccessor() error {
 	// Notify successor
 	succ := vn.successors[0]
-	succ_list, err := vn.ring.transport.Notify(succ, &vn.Vnode)
+	succList, err := vn.ring.transport.Notify(succ, &vn.Vnode)
 	if err != nil {
 		return err
 	}
 
 	// Trim the successors list if too long
-	max_succ := vn.ring.config.NumSuccessors
-	if len(succ_list) > max_succ-1 {
-		succ_list = succ_list[:max_succ-1]
+	maxSucc := vn.ring.config.NumSuccessors
+	if len(succList) > maxSucc-1 {
+		succList = succList[:maxSucc-1]
 	}
 
 	// Update local successors list
-	for idx, s := range succ_list {
+	for idx, s := range succList {
 		if s == nil {
 			break
 		}
@@ -167,17 +167,17 @@ func (vn *localVnode) notifySuccessor() error {
 }
 
 // RPC: Notify is invoked when a Vnode gets notified
-func (vn *localVnode) Notify(maybe_pred *Vnode) ([]*Vnode, error) {
+func (vn *localVnode) Notify(maybePred *Vnode) ([]*Vnode, error) {
 	// Check if we should update our predecessor
-	if vn.predecessor == nil || between(vn.predecessor.Id, vn.Id, maybe_pred.Id) {
+	if vn.predecessor == nil || between(vn.predecessor.Id, vn.Id, maybePred.Id) {
 		// Inform the delegate
 		conf := vn.ring.config
 		old := vn.predecessor
 		vn.ring.invokeDelegate(func() {
-			conf.Delegate.NewPredecessor(&vn.Vnode, maybe_pred, old)
+			conf.Delegate.NewPredecessor(&vn.Vnode, maybePred, old)
 		})
 
-		vn.predecessor = maybe_pred
+		vn.predecessor = maybePred
 	}
 
 	// Return our successors list
@@ -285,6 +285,15 @@ func (vn *localVnode) FindSuccessors(n int, key []byte) ([]*Vnode, error) {
 
 	// Checked all closer nodes and our successors!
 	return nil, fmt.Errorf("Exhausted all preceeding nodes!")
+}
+
+// Route a key upto n successors
+func (vn *localVnode) Route(srcID []byte, data []byte) error {
+	conf := vn.ring.config
+	vn.ring.invokeDelegate(func() {
+		conf.Delegate.MessageReceived(&vn.Vnode, data)
+	})
+	return vn.ring.transport.Route(srcID, vn.successors[0], data)
 }
 
 // Instructs the vnode to leave

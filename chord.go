@@ -15,25 +15,20 @@ import (
 type Transport interface {
 	// Gets a list of the vnodes on the box
 	ListVnodes(string) ([]*Vnode, error)
-
 	// Ping a Vnode, check for liveness
 	Ping(*Vnode) (bool, error)
-
 	// Request a nodes predecessor
 	GetPredecessor(*Vnode) (*Vnode, error)
-
 	// Notify our successor of ourselves
 	Notify(target, self *Vnode) ([]*Vnode, error)
-
 	// Find a successor
 	FindSuccessors(*Vnode, int, []byte) ([]*Vnode, error)
-
 	// Clears a predecessor if it matches a given vnode. Used to leave.
 	ClearPredecessor(target, self *Vnode) error
-
 	// Instructs a node to skip a given successor. Used to leave.
 	SkipSuccessor(target, self *Vnode) error
-
+	// Route data to a vnode
+	Route([]byte, *Vnode, []byte) error
 	// Register for an RPC callbacks
 	Register(*Vnode, VnodeRPC)
 }
@@ -45,6 +40,8 @@ type VnodeRPC interface {
 	FindSuccessors(int, []byte) ([]*Vnode, error)
 	ClearPredecessor(*Vnode) error
 	SkipSuccessor(*Vnode) error
+	// Route data around the ring it takes the source id and data as input
+	Route([]byte, []byte) error
 }
 
 // Delegate to notify on ring events
@@ -54,6 +51,7 @@ type Delegate interface {
 	PredecessorLeaving(local, remote *Vnode)
 	SuccessorLeaving(local, remote *Vnode)
 	Shutdown()
+	MessageReceived(*Vnode, []byte) error
 }
 
 // Config for Chord nodes
@@ -197,9 +195,7 @@ func (r *Ring) Lookup(n int, key []byte) ([]*Vnode, error) {
 	}
 
 	// Hash the key
-	h := r.config.HashFunc()
-	h.Write(key)
-	keyHash := h.Sum(nil)
+	keyHash := r.computeHash(key)
 
 	// Find the nearest local vnode
 	nearest := r.nearestVnode(keyHash)
@@ -215,4 +211,13 @@ func (r *Ring) Lookup(n int, key []byte) ([]*Vnode, error) {
 		successors = successors[:len(successors)-1]
 	}
 	return successors, nil
+}
+
+// Route data around the ring
+func (r *Ring) Route(data []byte) error {
+	// Hash the key
+	keyHash := r.computeHash(data)
+	// Find the nearest local vnode
+	nearest := r.nearestVnode(keyHash)
+	return nearest.Route(nearest.Id, data)
 }

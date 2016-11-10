@@ -58,6 +58,14 @@ func (ml *MultiLocalTrans) FindSuccessors(v *Vnode, n int, k []byte) ([]*Vnode, 
 	return ml.remote.FindSuccessors(v, n, k)
 }
 
+// Route message
+func (ml *MultiLocalTrans) Route(src []byte, v *Vnode, k []byte) error {
+	if local, ok := ml.hosts[v.Host]; ok {
+		return local.Route(src, v, k)
+	}
+	return ml.remote.Route(src, v, k)
+}
+
 // Clears a predecessor if it matches a given vnode. Used to leave.
 func (ml *MultiLocalTrans) ClearPredecessor(target, self *Vnode) error {
 	if local, ok := ml.hosts[target.Host]; ok {

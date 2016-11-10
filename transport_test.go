@@ -26,6 +26,9 @@ func (mv *MockVnodeRPC) FindSuccessors(n int, key []byte) ([]*Vnode, error) {
 	mv.key = key
 	return mv.succ, mv.err
 }
+func (mv *MockVnodeRPC) Route(src []byte, data []byte) error {
+	return nil
+}
 
 func (mv *MockVnodeRPC) ClearPredecessor(p *Vnode) error {
 	mv.pred = nil

@@ -7,9 +7,10 @@ service chord {
     rpc PingServe(Vnode) returns (BoolErr) {}
     rpc NotifyServe(VnodePair) returns (VnodeListErr) {}
     rpc GetPredecessorServe(Vnode) returns (VnodeError) {}
-    rpc FindSuccessorsServe(FindSuccReq) returns (VnodeListErr) {}
+    rpc FindSuccessorsServe(VnodeIntKey) returns (VnodeListErr) {}
     rpc ClearPredecessorServe(VnodePair) returns (ErrResponse) {}
     rpc SkipSuccessorServe(VnodePair) returns (ErrResponse) {}
+    rpc RouteServe(ChordMessage) returns (ErrResponse) {}
 }
 
 message Vnode {
@@ -32,11 +33,12 @@ message BoolErr {
     string err = 2;
 }
 
-message FindSuccReq {
-    Vnode VN = 1;
-    int32 count = 2;
+message VnodeIntKey {
+    Vnode vn = 1;
+    int32 n = 2;
     bytes key = 3;
 }
+
 message StringParam {
     string value = 1;
 }
@@ -48,4 +50,10 @@ message VnodePair {
 
 message ErrResponse {
     string err = 1;
+}
+
+message ChordMessage {
+    bytes src = 1;
+    Vnode target = 2;
+    bytes data = 3;
 }

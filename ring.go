@@ -128,3 +128,9 @@ func (r *Ring) safeInvoke(f func()) {
 	}()
 	f()
 }
+
+func (r *Ring) computeHash(b []byte) []byte {
+	h := r.config.HashFunc()
+	h.Write(b)
+	return h.Sum(nil)
+}
