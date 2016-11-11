@@ -41,7 +41,9 @@ type VnodeRPC interface {
 	ClearPredecessor(*Vnode) error
 	SkipSuccessor(*Vnode) error
 	// Route data around the ring following each predecessor.  It takes the
-	// source vnode id and data to be routed as input
+	// source vnode and data to be routed as input.  The source vnode gets passed
+	// around the ring so routing can end when the data reaches its point of
+	// origination.
 	Route(src *Vnode, data []byte) error
 }
 
@@ -52,8 +54,10 @@ type Delegate interface {
 	PredecessorLeaving(local, remote *Vnode)
 	SuccessorLeaving(local, remote *Vnode)
 	Shutdown()
-	// MessageReceived is called when a message is routed to a vnode of a node
-	MessageReceived(src, target *Vnode, data []byte) error
+	// MessageReceived is called when a message is routed to a vnode of a node.
+	// If false or an error are returned, data is not forwarded to the next vnode
+	// essentially stopping the ring traversal.
+	MessageReceived(src, target *Vnode, data []byte) (bool, error)
 }
 
 // Config for Chord nodes

@@ -94,7 +94,7 @@ CHECK_NEW_SUC:
 	if succ == nil {
 		panic("Node has no successor!")
 	}
-	maybe_suc, err := trans.GetPredecessor(succ)
+	maybeSuc, err := trans.GetPredecessor(succ)
 	if err != nil {
 		// Check if we have succ list, try to contact next live succ
 		known := vn.knownSuccessors()
@@ -119,12 +119,12 @@ CHECK_NEW_SUC:
 	}
 
 	// Check if we should replace our successor
-	if maybe_suc != nil && between(vn.Id, succ.Id, maybe_suc.Id) {
+	if maybeSuc != nil && between(vn.Id, succ.Id, maybeSuc.Id) {
 		// Check if new successor is alive before switching
-		alive, err := trans.Ping(maybe_suc)
+		alive, err := trans.Ping(maybeSuc)
 		if alive && err == nil {
 			copy(vn.successors[1:], vn.successors[0:len(vn.successors)-1])
-			vn.successors[0] = maybe_suc
+			vn.successors[0] = maybeSuc
 		} else {
 			return err
 		}
@@ -287,18 +287,6 @@ func (vn *localVnode) FindSuccessors(n int, key []byte) ([]*Vnode, error) {
 	return nil, fmt.Errorf("Exhausted all preceeding nodes!")
 }
 
-// Route a key upto n successors
-func (vn *localVnode) Route(src *Vnode, data []byte) error {
-	conf := vn.ring.config
-	vn.ring.invokeDelegate(func() {
-		conf.Delegate.MessageReceived(src, &vn.Vnode, data)
-	})
-	if vn.predecessor == nil {
-		return fmt.Errorf("no predecessor: %s", vn.Vnode.StringID())
-	}
-	return vn.ring.transport.Route(src, vn.predecessor, data)
-}
-
 // Instructs the vnode to leave
 func (vn *localVnode) leave() error {
 	// Inform the delegate we are leaving
@@ -361,4 +349,32 @@ func (vn *localVnode) knownSuccessors() (successors int) {
 		}
 	}
 	return
+}
+
+// Route a key upto n successors
+func (vn *localVnode) Route(src *Vnode, data []byte) error {
+	respCh := make(chan bool)
+	errCh := make(chan error)
+	conf := vn.ring.config
+	vn.ring.invokeDelegate(func() {
+		fwd, err := conf.Delegate.MessageReceived(src, &vn.Vnode, data)
+		if err == nil {
+			respCh <- fwd
+		} else {
+			errCh <- err
+		}
+	})
+
+	select {
+	case err := <-errCh:
+		return err
+	case fwd := <-respCh:
+		if fwd {
+			if vn.predecessor == nil {
+				return fmt.Errorf("no predecessor: %s", vn.Vnode.StringID())
+			}
+			return vn.ring.transport.Route(src, vn.predecessor, data)
+		}
+	}
+	return nil
 }
