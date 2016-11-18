@@ -116,7 +116,18 @@ func Create(conf *Config, trans Transport) (*Ring, error) {
 	ring := &Ring{}
 	ring.init(conf, trans)
 	ring.setLocalSuccessors()
-	ring.schedule()
+	//ring.schedule()
+
+	// Start delegate handler
+	if ring.config.Delegate != nil {
+		go ring.delegateHandler()
+	}
+
+	// Do a fast stabilization, will schedule regular execution
+	for _, vn := range ring.vnodes {
+		vn.stabilize()
+	}
+
 	return ring, nil
 }
 
@@ -226,4 +237,14 @@ func (r *Ring) Route(data []byte) error {
 	// Find the nearest local vnode
 	nearest := r.nearestVnode(keyHash)
 	return nearest.Route(&nearest.Vnode, data)
+}
+
+// ListVnodes for a given host
+func (r *Ring) ListVnodes(host string) ([]*Vnode, error) {
+	return r.transport.ListVnodes(host)
+}
+
+// Hostname of the current ring node
+func (r *Ring) Hostname() string {
+	return r.config.Hostname
 }

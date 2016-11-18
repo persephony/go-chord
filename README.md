@@ -4,7 +4,7 @@ Chord is used to organize nodes along a ring in a consistent way. It can be
 used to distribute work, build a key/value store, or serve as the underlying
 organization for a ring overlay topology.
 
-The protocol is seperated from the implementation of an underlying network
+The protocol is separated from the implementation of an underlying network
 transport or RPC mechanism. Instead Chord relies on a transport implementation.
 The following transport implementations are provided:
 
@@ -12,6 +12,7 @@ The following transport implementations are provided:
 - GRPCTransport
 
 #### TCPTransport
+<<<<<<< HEAD
 The TCPTransport is implemented using the native network stack and gob encoding.
 
 #### GRPCTransport
@@ -25,4 +26,24 @@ and re-generate the code using:
 
 # Documentation
 To view the online documentation, go [here](http://godoc.org/github.com/euforia/go-chord).
+=======
+The TCPTransport is implemented using the go native network stack and gob encoding.
 
+#### GRPCTransport
+The GRPCTransport uses grpc and protocol buffers to perform rpc operations.
+
+# Development
+When using grpc and changes need to be made, add the appropriate code to the net.proto file,
+and re-generate the code using:
+>>>>>>> ab8fc77b0a060a852f3e4d2ff52cbef53cb3cc91
+
+	make protoc
+
+#### Requirements
+
+- Go 1.6.3
+- protoc
+- grpc
+
+# Documentation
+To view the online documentation, go [here](http://godoc.org/github.com/euforia/go-chord).

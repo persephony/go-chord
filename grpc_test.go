@@ -2,8 +2,11 @@ package chord
 
 import (
 	"fmt"
+	"net"
 	"testing"
 	"time"
+
+	"google.golang.org/grpc"
 )
 
 func prepRingGrpc(port int) (*Config, *GRPCTransport, error) {
@@ -13,10 +16,15 @@ func prepRingGrpc(port int) (*Config, *GRPCTransport, error) {
 	conf.StabilizeMin = time.Duration(15 * time.Millisecond)
 	conf.StabilizeMax = time.Duration(45 * time.Millisecond)
 	timeout := time.Duration(20 * time.Millisecond)
-	trans, err := InitGRPCTransport(listen, timeout)
+	connMaxIdle := time.Duration(300 * time.Second)
+	gserver := grpc.NewServer()
+
+	ln, err := net.Listen("tcp", listen)
 	if err != nil {
 		return nil, nil, err
 	}
+
+	trans := NewGRPCTransport(ln, gserver, timeout, connMaxIdle)
 	return conf, trans, nil
 }
 

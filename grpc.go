@@ -19,8 +19,9 @@ type rpcOutConn struct {
 	used   time.Time
 }
 
+// GRPCTransport used by chord
 type GRPCTransport struct {
-	sock     *net.TCPListener
+	sock     net.Listener
 	server   *grpc.Server
 	lock     sync.RWMutex
 	local    map[string]*localRPC
@@ -31,28 +32,24 @@ type GRPCTransport struct {
 	maxIdle  time.Duration
 }
 
-func InitGRPCTransport(listen string, timeout time.Duration) (*GRPCTransport, error) {
-	// Try to start the listener
-	sock, err := net.Listen("tcp", listen)
-	if err != nil {
-		return nil, err
-	}
-
-	cs := &GRPCTransport{
-		sock:    sock.(*net.TCPListener),
-		server:  grpc.NewServer(),
+// NewGRPCTransport creates a new grpc transport using the provided listener
+// and grpc server.
+func NewGRPCTransport(sock net.Listener, gserver *grpc.Server, rpcTimeout, connMaxIdle time.Duration) *GRPCTransport {
+	gt := &GRPCTransport{
+		sock:    sock,
+		server:  gserver,
 		local:   map[string]*localRPC{},
 		pool:    map[string][]*rpcOutConn{},
-		maxIdle: time.Duration(300 * time.Second),
-		timeout: timeout,
+		timeout: rpcTimeout,
+		maxIdle: connMaxIdle,
 	}
 
-	RegisterChordServer(cs.server, cs)
+	RegisterChordServer(gt.server, gt)
 
-	go cs.listen()
-	go cs.reapOld()
+	go gt.listen()
+	go gt.reapOld()
 
-	return cs, nil
+	return gt
 }
 
 func (cs *GRPCTransport) listen() {
@@ -97,7 +94,7 @@ func (cs *GRPCTransport) Register(v *Vnode, o VnodeRPC) {
 	cs.lock.Unlock()
 }
 
-// Gets a list of the vnodes on the box
+// ListVnodes gets a list of the vnodes on the box
 func (cs *GRPCTransport) ListVnodes(host string) ([]*Vnode, error) {
 	// Get a conn
 	out, err := cs.getConn(host)
@@ -170,7 +167,7 @@ func (cs *GRPCTransport) Ping(target *Vnode) (bool, error) {
 	}
 }
 
-// Request a nodes predecessor
+// GetPredecessor requests a vnode's predecessor
 func (cs *GRPCTransport) GetPredecessor(vn *Vnode) (*Vnode, error) {
 	// Get a conn
 	out, err := cs.getConn(vn.Host)
@@ -239,7 +236,7 @@ func (cs *GRPCTransport) Notify(target, self *Vnode) ([]*Vnode, error) {
 	}
 }
 
-// Find a successor
+// FindSuccessors given the vnode upto n successors
 func (cs *GRPCTransport) FindSuccessors(vn *Vnode, n int, k []byte) ([]*Vnode, error) {
 	// Get a conn
 	out, err := cs.getConn(vn.Host)
@@ -560,10 +557,8 @@ func (cs *GRPCTransport) RouteServe(ctx context.Context, vik *ChordMessage) (*Er
 // Shutdown the TCP transport
 func (cs *GRPCTransport) Shutdown() {
 	atomic.StoreInt32(&cs.shutdown, 1)
+	// Stop grcp server
 	cs.server.GracefulStop()
-	//cs.server.Stop()
-	cs.sock.Close()
-
 	// Close all the outbound
 	cs.poolLock.Lock()
 	for _, conns := range cs.pool {
